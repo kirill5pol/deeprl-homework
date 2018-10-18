@@ -9,6 +9,7 @@ Example usage:
 Author of this script and included expert policies: Jonathan Ho (hoj@openai.com)
 """
 
+import os
 import pickle
 import tensorflow as tf
 import numpy as np
@@ -67,6 +68,9 @@ def main():
 
         expert_data = {'observations': np.array(observations),
                        'actions': np.array(actions)}
+
+        with open(os.path.join('expert_data', args.envname + '.pkl'), 'wb') as f:
+            pickle.dump(expert_data, f, pickle.HIGHEST_PROTOCOL)
 
 if __name__ == '__main__':
     main()

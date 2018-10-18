@@ -7,7 +7,7 @@ import random
 
 def huber_loss(x, delta=1.0):
     # https://en.wikipedia.org/wiki/Huber_loss
-    return tf.select(
+    return tf.where(
         tf.abs(x) < delta,
         tf.square(x) * 0.5,
         delta * (tf.abs(x) - 0.5 * delta)
@@ -172,7 +172,7 @@ def get_wrapper_by_name(env, classname):
             raise ValueError("Couldn't find wrapper named %s"%classname)
 
 class ReplayBuffer(object):
-    def __init__(self, size, frame_history_len):
+    def __init__(self, size, frame_history_len, lander=False):
         """This is a memory efficient implementation of the replay buffer.
 
         The sepecific memory optimizations use here are:
@@ -198,6 +198,8 @@ class ReplayBuffer(object):
         frame_history_len: int
             Number of memories to be retried for each observation.
         """
+        self.lander = lander
+
         self.size = size
         self.frame_history_len = frame_history_len
 
@@ -315,7 +317,7 @@ class ReplayBuffer(object):
             Index at which the frame is stored. To be used for `store_effect` later.
         """
         if self.obs is None:
-            self.obs      = np.empty([self.size] + list(frame.shape), dtype=np.uint8)
+            self.obs      = np.empty([self.size] + list(frame.shape), dtype=np.float32 if self.lander else np.uint8)
             self.action   = np.empty([self.size],                     dtype=np.int32)
             self.reward   = np.empty([self.size],                     dtype=np.float32)
             self.done     = np.empty([self.size],                     dtype=np.bool)

@@ -61,7 +61,7 @@ def atari_learn(env,
     )
 
     dqn.learn(
-        env,
+        env=env,
         q_func=atari_model,
         optimizer_spec=optimizer,
         session=session,
@@ -74,7 +74,8 @@ def atari_learn(env,
         learning_freq=4,
         frame_history_len=4,
         target_update_freq=10000,
-        grad_norm_clipping=10
+        grad_norm_clipping=10,
+        double_q=True
     )
     env.close()
 
@@ -89,7 +90,7 @@ def set_global_seeds(i):
     except ImportError:
         pass
     else:
-        tf.set_random_seed(i) 
+        tf.set_random_seed(i)
     np.random.seed(i)
     random.seed(i)
 
@@ -103,9 +104,7 @@ def get_session():
     return session
 
 def get_env(task, seed):
-    env_id = task.env_id
-
-    env = gym.make(env_id)
+    env = gym.make('PongNoFrameskip-v4')
 
     set_global_seeds(seed)
     env.seed(seed)
@@ -118,16 +117,14 @@ def get_env(task, seed):
 
 def main():
     # Get Atari games.
-    benchmark = gym.benchmark_spec('Atari40M')
-
-    # Change the index to select a different game.
-    task = benchmark.tasks[3]
+    task = gym.make('PongNoFrameskip-v4')
 
     # Run training
-    seed = 0 # Use a seed of zero (you may want to randomize the seed!)
+    seed = random.randint(0, 9999)
+    print('random seed = %d' % seed)
     env = get_env(task, seed)
     session = get_session()
-    atari_learn(env, session, num_timesteps=task.max_timesteps)
+    atari_learn(env, session, num_timesteps=2e8)
 
 if __name__ == "__main__":
     main()
