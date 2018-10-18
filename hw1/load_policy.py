@@ -42,6 +42,7 @@ def load_policy(filename):
         # Hidden layers next
         assert list(policy_params['hidden'].keys()) == ['FeedforwardNet']
         layer_params = policy_params['hidden']['FeedforwardNet']
+        layer_params.keys()
         for layer_name in sorted(layer_params.keys()):
             l = layer_params[layer_name]
             W, b = read_layer(l)

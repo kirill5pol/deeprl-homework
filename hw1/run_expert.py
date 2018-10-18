@@ -20,7 +20,6 @@ import load_policy
 def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('expert_policy_file', type=str)
     parser.add_argument('envname', type=str)
     parser.add_argument('--render', action='store_true')
     parser.add_argument("--max_timesteps", type=int)
@@ -29,7 +28,7 @@ def main():
     args = parser.parse_args()
 
     print('loading and building expert policy')
-    policy_fn = load_policy.load_policy(args.expert_policy_file)
+    policy_fn = load_policy.load_policy('experts/' + args.envname + '.pkl')
     print('loaded and built')
 
     with tf.Session():
