@@ -9,7 +9,6 @@ import numpy as np
 import gym
 
 # Utilities =================================================================================
-
 def build_mlp(input_placeholder, output_size, scope, n_layers, size, activation=tf.tanh, output_activation=None):
     ''' Builds a feedforward neural network
 
@@ -25,24 +24,24 @@ def build_mlp(input_placeholder, output_size, scope, n_layers, size, activation=
         returns:
             output placeholder of the network (the result of a forward pass)
     '''
-    # var_init = tf.initializers.variance_scaling(scale=2.0)
+    var_init = tf.initializers.variance_scaling(scale=2.0)
 
-    # with tf.scope(scope):
-    #     h = input_placeholder
-    #     for layer in n_layers:
-    #         h = tf.layers.dense(
-    #             inputs=h,
-    #             units=size,
-    #             activation=activation,
-    #             kernel_initializer=var_init)
-    #     output_placeholder = tf.layers.dense(
-    #         inputs=h,
-    #         units=output_size,
-    #         activation=output_activation,
-    #         kernel_initializer=var_init)
+    with tf.scope(scope):
+        h = input_placeholder
+        for layer in n_layers:
+            h = tf.layers.dense(
+                inputs=h,
+                units=size,
+                activation=activation,
+                kernel_initializer=var_init)
+        output_placeholder = tf.layers.dense(
+            inputs=h,
+            units=output_size,
+            activation=output_activation,
+            kernel_initializer=var_init)
 
-    # batch_size = input_placeholder.shape.as_list()[0]
-    # assert output_placeholder.shape.as_list() == [output_size, batch_size]
+    batch_size = input_placeholder.shape.as_list()[0]
+    assert output_placeholder.shape.as_list() == [output_size, batch_size]
     return output_placeholder
 
 
@@ -59,9 +58,7 @@ def setup_logger(logdir, locals_):
     logz.save_params(params)
 
 
-
 # Policy Gradient ===========================================================================
-
 class Agent(object):
     def __init__(self, computation_graph_args, sample_trajectory_args, estimate_return_args):
         super(Agent, self).__init__()
@@ -105,12 +102,9 @@ class Agent(object):
             sym_act_na = tf.placeholder(shape=[None, self.act_dim], name='actions', dtype=tf.float32)
 
         # YOUR_CODE_HERE
-        # sym_adv_n = tf.placeholder(shape=[None], name='advantages', dtype=tf.float32)
-        # return sym_obs_no, sym_act_na, sym_adv_n
+        sym_adv_n = tf.placeholder(shape=[None], name='advantages', dtype=tf.float32)
+        return sym_obs_no, sym_act_na, sym_adv_n
 
-
-    #========================================================================================#
-    #                           ----------PROBLEM 2----------
     def policy_forward_pass(self, sym_obs_no):
         ''' Constructs the symbolic operation for the policy network outputs,
             which are the parameters of the policy distribution p(a|s)
@@ -137,7 +131,6 @@ class Agent(object):
                 pass in self.size for the 'size' argument.
         '''
         if self.discrete:
-            # YOUR_CODE_HERE
             sym_logits_na = build_mlp(
                 input_placeholder=sym_obs_no,
                 output_size=self.act_dim,
@@ -149,7 +142,6 @@ class Agent(object):
             return sym_logits_na
 
         else:
-            # YOUR_CODE_HERE
             sym_mean = build_mlp(
                 input_placeholder=sym_obs_no,
                 output_size=self.act_dim,
@@ -158,11 +150,11 @@ class Agent(object):
                 size=self.size,
                 activation=tf.tanh,
                 output_activation=None)
-            sym_logstd = None
+            sym_logstd = tf.get_variable(
+                name='log_std',
+                initializer=-0.5*np.ones(self.act_dim, dtype=np.float32))
             return (sym_mean, sym_logstd)
 
-    #========================================================================================#
-    #                           ----------PROBLEM 2----------
     def sample_action(self, policy_parameters):
         ''' Constructs a symbolic operation for stochastically sampling from the policy
             distribution
@@ -187,19 +179,17 @@ class Agent(object):
 
                  This reduces the problem to just sampling z. (Hint: use tf.random_normal!)
         '''
-        raise NotImplementedError
+        # raise NotImplementedError
         if self.discrete:
             sym_logits_na = policy_parameters
             # YOUR_CODE_HERE
-            sym_sampled_act = None
+            sym_sampled_act = tf.random.multinomial(sym_logits_na, 1)
         else:
             sym_mean, sym_logstd = policy_parameters
             # YOUR_CODE_HERE
-            sym_sampled_act = None
+            sym_sampled_act = sys_mean + tf.random.normal(self.act_dim) * sym_logstd
         return sym_sampled_act
 
-    #========================================================================================#
-    #                           ----------PROBLEM 2----------
     def get_log_prob(self, policy_parameters, sym_act_na):
         ''' Constructs a symbolic operation for computing the log probability of a set of actions
             that were actually taken according to the policy
@@ -226,8 +216,8 @@ class Agent(object):
         raise NotImplementedError
         if self.discrete:
             sym_logits_na = policy_parameters
-            # YOUR_CODE_HERE
-            sym_logprobs_n = None
+            # sym_logits_na - tf.math.log(tf.reduce_sum(tf.math.exp(logits), axis))
+            sym_logprobs_n = tf.nn.log_softmax(sym_logits_na)
         else:
             sym_mean, sym_logstd = policy_parameters
             # YOUR_CODE_HERE
