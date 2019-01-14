@@ -52,7 +52,7 @@ def plot_data(data, value="AverageReturn"):
     if isinstance(data, list):
         data = pd.concat(data, ignore_index=True)
 
-    sns.set(style="darkgrid", font_scale=1.5)
+    sns.set(style="darkgrid", font_scale=1)
     sns.tsplot(data=data, time="Iteration", value=value, unit="Unit", condition="Condition")
     plt.legend(loc='best').draggable()
     plt.show()
@@ -95,18 +95,23 @@ def main():
     parser.add_argument('--value', default='AverageReturn', nargs='*')
     args = parser.parse_args()
 
+    logdirs = args.logdir
+    if len(logdirs) == 0 and os.path.isdir(args.logdir[0]):
+        path = logdirs
+        logdirs = [d for d in os.listdir(mypath) if os.path.isdir(os.path.join(path, d))]
+
     use_legend = False
     if args.legend is not None:
-        assert len(args.legend) == len(args.logdir), \
+        assert len(args.legend) == len(logdirs), \
             "Must give a legend title for each set of experiments."
         use_legend = True
 
     data = []
     if use_legend:
-        for logdir, legend_title in zip(args.logdir, args.legend):
+        for logdir, legend_title in zip(logdirs, args.legend):
             data += get_datasets(logdir, legend_title)
     else:
-        for logdir in args.logdir:
+        for logdir in logdirs:
             data += get_datasets(logdir)
 
     if isinstance(args.value, list):
