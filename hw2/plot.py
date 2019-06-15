@@ -48,13 +48,16 @@ the --legend flag and then provide a title for each logdir.
 
 """
 
+
 def plot_data(data, value="AverageReturn"):
     if isinstance(data, list):
         data = pd.concat(data, ignore_index=True)
 
     sns.set(style="darkgrid", font_scale=1)
-    sns.tsplot(data=data, time="Iteration", value=value, unit="Unit", condition="Condition")
-    plt.legend(loc='best').draggable()
+    sns.tsplot(
+        data=data, time="Iteration", value=value, unit="Unit", condition="Condition"
+    )
+    plt.legend(loc="best").draggable()
     plt.show()
 
 
@@ -62,24 +65,18 @@ def get_datasets(fpath, condition=None):
     unit = 0
     datasets = []
     for root, dir, files in os.walk(fpath):
-        if 'log.txt' in files:
-            param_path = open(os.path.join(root,'params.json'))
+        if "log.txt" in files:
+            param_path = open(os.path.join(root, "params.json"))
             params = json.load(param_path)
-            exp_name = params['exp_name']
-            
-            log_path = os.path.join(root,'log.txt')
+            exp_name = params["exp_name"]
+
+            log_path = os.path.join(root, "log.txt")
             experiment_data = pd.read_table(log_path)
 
+            experiment_data.insert(len(experiment_data.columns), "Unit", unit)
             experiment_data.insert(
-                len(experiment_data.columns),
-                'Unit',
-                unit
-                )        
-            experiment_data.insert(
-                len(experiment_data.columns),
-                'Condition',
-                condition or exp_name
-                )
+                len(experiment_data.columns), "Condition", condition or exp_name
+            )
 
             datasets.append(experiment_data)
             unit += 1
@@ -89,21 +86,25 @@ def get_datasets(fpath, condition=None):
 
 def main():
     import argparse
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('logdir', nargs='*')
-    parser.add_argument('--legend', nargs='*')
-    parser.add_argument('--value', default='AverageReturn', nargs='*')
+    parser.add_argument("logdir", nargs="*")
+    parser.add_argument("--legend", nargs="*")
+    parser.add_argument("--value", default="AverageReturn", nargs="*")
     args = parser.parse_args()
 
     logdirs = args.logdir
     if len(logdirs) == 0 and os.path.isdir(args.logdir[0]):
         path = logdirs
-        logdirs = [d for d in os.listdir(mypath) if os.path.isdir(os.path.join(path, d))]
+        logdirs = [
+            d for d in os.listdir(mypath) if os.path.isdir(os.path.join(path, d))
+        ]
 
     use_legend = False
     if args.legend is not None:
-        assert len(args.legend) == len(logdirs), \
-            "Must give a legend title for each set of experiments."
+        assert len(args.legend) == len(
+            logdirs
+        ), "Must give a legend title for each set of experiments."
         use_legend = True
 
     data = []
@@ -120,6 +121,7 @@ def main():
         values = [args.value]
     for value in values:
         plot_data(data, value=value)
+
 
 if __name__ == "__main__":
     main()
