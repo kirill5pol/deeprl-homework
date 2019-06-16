@@ -1,3 +1,5 @@
+from __future__ import print_function, division
+
 from multiprocessing import Process
 import inspect
 import logz
@@ -237,8 +239,8 @@ class Agent(object):
         else:
             sym_mean, sym_logstd = policy_parameters
             # YOUR_CODE_HERE
-            print(self.act_dim)
-            print(sym_mean.shape)
+            # print(self.act_dim)
+            # print(sym_mean.shape)
             sym_sampled_act = (
                 sym_mean + tf.random.normal(tf.shape(sym_mean)) * sym_logstd
             )
@@ -365,24 +367,25 @@ class Agent(object):
                 )
             )
             # YOUR_CODE_HERE
-            self.sym_target_n = None
-            baseline_loss = None
+            # self.sym_target_n = None
+            # baseline_loss = None
 
             self.sym_target_n = tf.placeholder(
                 shape=[None], name="value_targets", dtype=tf.float32
             )
-            baseline_loss = tf.reduce_sum(
+            self.baseline_loss = tf.reduce_sum(
                 tf.square(self.sym_target_n - self.baseline_prediction)
             )
             self.baseline_update_op = tf.train.AdamOptimizer(
                 self.learning_rate
-            ).minimize(baseline_loss)
+            ).minimize(self.baseline_loss)
 
     def sample_trajectories(self, itr, env):
         # Collect paths until we have enough timesteps
         timesteps_this_batch = 0
         paths = []
         while True:
+
             animate_this_episode = len(paths) == 0 and (itr % 10 == 0) and self.animate
             path = self.sample_trajectory(env, animate_this_episode)
             paths.append(path)
@@ -395,9 +398,10 @@ class Agent(object):
         ob = env.reset()
         obs, acs, rewards = [], [], []
         steps = 0
+        # print("single traj")
         while True:
             if animate_this_episode:
-                print("trying_to_render")
+                # print("trying_to_render")
                 env.render(mode="human")
                 # time.sleep(0.1)
             obs.append(ob)
@@ -506,7 +510,7 @@ class Agent(object):
                 pathlen = path.shape[0]
                 for i, reward in enumerate(path):
                     q_n.append(np.sum(path * self.gammas[:pathlen]))
-        return q_n
+        return np.array(q_n).flatten()
 
     def compute_advantage(self, obs_no, q_n):
         """
@@ -537,17 +541,23 @@ class Agent(object):
             # Hint #bl1: rescale the output from the nn_baseline to match the statistics
             # (mean and std) of the current batch of Q-values. (Goes with Hint
             # #bl2 in Agent.update_parameters.
+
+            # YOUR CODE HERE
             # raise NotImplementedError
-            b_n = None  # YOUR CODE HERE
-
-            # b_n =
-            # Normalize the baseline prediction
-            mu_b_n = np.mean(b_n)
-            var_b_ = np.var(b_n)
-
-            adv_n = q_n - b_n
+            # b_n = None
+            b_n = self.sess.run(
+                [self.baseline_prediction], feed_dict={self.sym_obs_no: obs_no}
+            )
+            b_n = np.array(b_n).flatten()
+            # Normalize the baseline prediction to match the q-values of this batch
+            mu = np.mean(q_n)
+            sigma = np.var(q_n)
+            b_n_norm = (b_n - mu) / sigma
+            adv_n = q_n - b_n_norm
         else:
             adv_n = q_n.copy()
+
+        print("sum_of_path_lengths", adv_n.shape)
         return adv_n
 
     def estimate_return(self, obs_no, re_n):
@@ -619,8 +629,20 @@ class Agent(object):
             # Agent.compute_advantage.)
 
             # YOUR_CODE_HERE
-            raise NotImplementedError
-            target_n = None
+            # raise NotImplementedError
+            # target_n = None
+
+            # Normalize the baseline prediction
+            mu = np.mean(q_n)
+            sigma = np.var(q_n)
+            target_n = (q_n - mu) / sigma
+
+        # Optimization (should this be before or after the policy update???)
+        if self.nn_baseline:
+            _, baseline_loss = self.sess.run(
+                [self.baseline_update_op, self.baseline_loss],
+                feed_dict={self.sym_obs_no: obs_no, self.sym_target_n: target_n},
+            )
 
         # ====================================================================================#
         #                           ----------PROBLEM 3----------
@@ -644,7 +666,9 @@ class Agent(object):
                 self.sym_adv_n: adv_n,
             },
         )
-        print("loss: {}".format(loss))
+
+        print("loss:    {}".format(loss))
+        print("bl-loss: {}".format(baseline_loss))
         return loss
 
 
@@ -770,7 +794,7 @@ def main():
     parser.add_argument("env_name", type=str)
     parser.add_argument("--exp_name", "-e", type=str, default="vpg")
     parser.add_argument("--render", "-r", action="store_true")
-    parser.add_argument("--render_at_end", "-r", action="store_true")
+    parser.add_argument("--render_at_end", "-re", action="store_true")
     parser.add_argument("--discount", type=float, default=1.0)
     parser.add_argument("--n_iter", "-n", type=int, default=100)
     parser.add_argument("--batch_size", "-b", type=int, default=1000)
